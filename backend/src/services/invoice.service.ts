@@ -89,7 +89,14 @@ export class InvoiceService {
     return updatedInvoice;
   }
 
-  async getDueReminders(): Promise<Invoice[]> {
+  async remove(id: string): Promise<void> {
+    const result = await this.invoiceModel.deleteOne({ _id: id }).exec();
+    if (result.deletedCount === 0) {
+      throw new NotFoundException(`Invoice with ID ${id} not found`);
+    }
+  }
+
+  async getDueInvoices(): Promise<Invoice[]> {
     const today = new Date();
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
@@ -100,8 +107,8 @@ export class InvoiceService {
     }).exec();
   }
 
-  async sendReminder(invoiceId: string): Promise<{ success: boolean; message: string }> {
-    const invoice = await this.findOne(invoiceId);
+  async sendReminder(id: string): Promise<{ success: boolean; message: string }> {
+    const invoice = await this.findOne(id);
     
     // Basic reminder implementation
     const reminder = {
@@ -111,7 +118,7 @@ export class InvoiceService {
     };
 
     // Update last reminder sent
-    await this.invoiceModel.findByIdAndUpdate(invoiceId, {
+    await this.invoiceModel.findByIdAndUpdate(id, {
       lastReminderSent: new Date()
     });
 

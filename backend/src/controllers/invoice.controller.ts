@@ -1,43 +1,53 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { InvoiceService } from '../services/invoice.service';
-import { Invoice } from '../schemas/invoice.schema';
+import { CreateInvoiceDto } from '../dto/create-invoice.dto';
+import { UpdateInvoiceDto } from '../dto/update-invoice.dto';
 
 @Controller('invoices')
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) {}
 
   @Post()
-  async create(@Body() invoice: Invoice) {
-    return this.invoiceService.create(invoice);
+  create(@Body() createInvoiceDto: CreateInvoiceDto) {
+    return this.invoiceService.create(createInvoiceDto);
   }
 
   @Get()
-  async findAll() {
+  findAll() {
     return this.invoiceService.findAll();
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string) {
     return this.invoiceService.findOne(id);
   }
 
-  @Put(':id')
-  async update(@Param('id') id: string, @Body() invoice: Invoice) {
-    return this.invoiceService.update(id, invoice);
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateInvoiceDto: UpdateInvoiceDto) {
+    return this.invoiceService.update(id, updateInvoiceDto);
   }
 
-  @Post('calculate-tax')
-  async calculateTax(@Body() data: { subtotal: number; taxRate: number; region: string }) {
-    return this.invoiceService.calculateTax(data.subtotal, data.taxRate, data.region);
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.invoiceService.remove(id);
   }
 
   @Get('reminders/due')
-  async getDueReminders() {
-    return this.invoiceService.getDueReminders();
+  getDueInvoices() {
+    return this.invoiceService.getDueInvoices();
   }
 
-  @Post('reminders/:id/send')
-  async sendReminder(@Param('id') id: string) {
+  @Post(':id/reminder')
+  sendReminder(@Param('id') id: string) {
     return this.invoiceService.sendReminder(id);
+  }
+
+  @Get('tax/calculate')
+  calculateTax(
+    @Query('amount') amount: number,
+    @Query('taxRate') taxRate: number,
+    @Query('region') region: string
+  ) {
+    return this.invoiceService.calculateTax(amount, taxRate, region);
   }
 } 
