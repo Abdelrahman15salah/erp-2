@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, IconButton } from '@mui/material';
+import { TextField, Button, Box, Typography, IconButton, Paper, Divider, Alert } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 
 interface InvoiceItem {
@@ -17,6 +18,7 @@ const InvoiceForm = () => {
     discount: 0,
     dueDate: ''
   });
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ const InvoiceForm = () => {
         ...formData,
         dueDate: new Date(formData.dueDate)
       });
-      alert('Invoice created successfully!');
+      setMessage({ type: 'success', text: 'Invoice created successfully!' });
       setFormData({
         clientId: '',
         items: [{ name: '', quantity: 1, unitPrice: 0 }],
@@ -33,9 +35,11 @@ const InvoiceForm = () => {
         discount: 0,
         dueDate: ''
       });
+      setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       console.error('Error creating invoice:', error);
-      alert('Error creating invoice');
+      setMessage({ type: 'error', text: 'Error creating invoice' });
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
@@ -73,92 +77,160 @@ const InvoiceForm = () => {
     });
   };
 
+  const calculateSubtotal = () => {
+    return formData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const taxAmount = (subtotal * formData.tax) / 100;
+    return subtotal + taxAmount - formData.discount;
+  };
+
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 2 }}>
-      <Typography variant="h5" gutterBottom>
+    <Paper elevation={2} sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
+      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
         Create Invoice
       </Typography>
+
+      {message && (
+        <Alert severity={message.type} sx={{ mb: 3 }}>
+          {message.text}
+        </Alert>
+      )}
+
       <form onSubmit={handleSubmit}>
-        <TextField
-          fullWidth
-          margin="normal"
-          label="Client ID"
-          name="clientId"
-          value={formData.clientId}
-          onChange={handleChange}
-        />
-        
-        {formData.items.map((item, index) => (
-          <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+          <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
             <TextField
-              label="Item Name"
-              value={item.name}
-              onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+              fullWidth
+              label="Client ID"
+              name="clientId"
+              value={formData.clientId}
+              onChange={handleChange}
+              required
             />
-            <TextField
-              label="Quantity"
-              type="number"
-              value={item.quantity}
-              onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-            />
-            <TextField
-              label="Unit Price"
-              type="number"
-              value={item.unitPrice}
-              onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
-            />
-            <IconButton onClick={() => removeItem(index)} color="error">
-              <DeleteIcon />
-            </IconButton>
           </Box>
-        ))}
-        
-        <Button onClick={addItem} sx={{ mt: 2 }}>
-          Add Item
-        </Button>
+          <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
+            <TextField
+              fullWidth
+              label="Due Date"
+              name="dueDate"
+              type="date"
+              value={formData.dueDate}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              required
+            />
+          </Box>
+        </Box>
 
-        <TextField
-          fullWidth
-          margin="normal"
-          label="Tax Rate (%)"
-          name="tax"
-          type="number"
-          value={formData.tax}
-          onChange={handleChange}
-        />
-        
-        <TextField
-          fullWidth
-          margin="normal"
-          label="Discount"
-          name="discount"
-          type="number"
-          value={formData.discount}
-          onChange={handleChange}
-        />
-        
-        <TextField
-          fullWidth
-          margin="normal"
-          label="Due Date"
-          name="dueDate"
-          type="date"
-          value={formData.dueDate}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-        />
+        <Box sx={{ mt: 4, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Items
+          </Typography>
+          {formData.items.map((item, index) => (
+            <Paper key={index} elevation={0} sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+                  <TextField
+                    fullWidth
+                    label="Item Name"
+                    value={item.name}
+                    onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                    required
+                  />
+                </Box>
+                <Box sx={{ flex: '0 1 100px', minWidth: 0 }}>
+                  <TextField
+                    fullWidth
+                    label="Quantity"
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                    required
+                  />
+                </Box>
+                <Box sx={{ flex: '0 1 150px', minWidth: 0 }}>
+                  <TextField
+                    fullWidth
+                    label="Unit Price"
+                    type="number"
+                    value={item.unitPrice}
+                    onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
+                    required
+                  />
+                </Box>
+                <Box sx={{ flex: '0 0 auto' }}>
+                  <IconButton 
+                    onClick={() => removeItem(index)} 
+                    color="error"
+                    disabled={formData.items.length === 1}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Paper>
+          ))}
+          
+          <Button
+            startIcon={<AddIcon />}
+            onClick={addItem}
+            variant="outlined"
+            sx={{ mt: 2 }}
+          >
+            Add Item
+          </Button>
+        </Box>
 
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          Create Invoice
-        </Button>
+        <Divider sx={{ my: 3 }} />
+
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+          <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+            <TextField
+              fullWidth
+              label="Tax Rate (%)"
+              name="tax"
+              type="number"
+              value={formData.tax}
+              onChange={handleChange}
+            />
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+            <TextField
+              fullWidth
+              label="Discount"
+              name="discount"
+              type="number"
+              value={formData.discount}
+              onChange={handleChange}
+            />
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+            <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Subtotal: ${calculateSubtotal().toFixed(2)}
+              </Typography>
+              <Typography variant="h6">
+                Total: ${calculateTotal().toFixed(2)}
+              </Typography>
+            </Paper>
+          </Box>
+        </Box>
+
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            size="large"
+          >
+            Create Invoice
+          </Button>
+        </Box>
       </form>
-    </Box>
+    </Paper>
   );
 };
 
