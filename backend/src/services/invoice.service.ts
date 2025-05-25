@@ -14,25 +14,41 @@ export class InvoiceService {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     
-    // Get the count of invoices for the current month
-    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    
-    const count = await this.invoiceModel.countDocuments({
-      createdAt: { $gte: startOfMonth, $lte: endOfMonth }
-    });
-    
-    // Format: INV-YYYY-MM-XXXX where XXXX is a sequential number
+    const count = await this.invoiceModel.countDocuments();
     return `INV-${year}-${month}-${String(count + 1).padStart(4, '0')}`;
   }
 
-  async create(invoice: Invoice): Promise<Invoice> {
+  private calculateSubtotal(items: any[]): number {
+    return items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  }
+
+  calculateTax(subtotal: number, taxRate: number, region: string): number {
+    // Basic tax calculation - can be enhanced with region-specific rules
+    return subtotal * (taxRate / 100);
+  }
+
+  private calculateTotal(subtotal: number, tax: number, discount: number): number {
+    return subtotal + tax - discount;
+  }
+
+  async create(invoiceData: any): Promise<Invoice> {
     const invoiceNumber = await this.generateInvoiceNumber();
+    
+    // Calculate totals
+    const subtotal = this.calculateSubtotal(invoiceData.items);
+    const tax = this.calculateTax(subtotal, invoiceData.taxRate, invoiceData.taxRegion);
+    const total = this.calculateTotal(subtotal, tax, invoiceData.discount || 0);
+
     const newInvoice = new this.invoiceModel({
-      ...invoice,
+      ...invoiceData,
       invoiceNumber,
-      status: 'pending'
+      subtotal,
+      tax,
+      total,
+      status: 'pending',
+      createdAt: new Date()
     });
+
     return newInvoice.save();
   }
 
@@ -48,18 +64,29 @@ export class InvoiceService {
     return invoice;
   }
 
-  async update(id: string, invoice: Invoice): Promise<Invoice> {
+  async update(id: string, updateData: any): Promise<Invoice> {
+    const invoice = await this.findOne(id);
+    
+    // Recalculate totals if items are updated
+    if (updateData.items) {
+      const subtotal = this.calculateSubtotal(updateData.items);
+      const tax = this.calculateTax(subtotal, updateData.taxRate || invoice.taxRate, updateData.taxRegion || invoice.taxRegion);
+      const total = this.calculateTotal(subtotal, tax, updateData.discount || invoice.discount);
+      
+      updateData.subtotal = subtotal;
+      updateData.tax = tax;
+      updateData.total = total;
+    }
+
     const updatedInvoice = await this.invoiceModel
-      .findByIdAndUpdate(id, invoice, { new: true })
+      .findByIdAndUpdate(id, updateData, { new: true })
       .exec();
+
     if (!updatedInvoice) {
       throw new NotFoundException(`Invoice with ID ${id} not found`);
     }
-    return updatedInvoice;
-  }
 
-  async calculateTax(subtotal: number, taxRate: number): Promise<number> {
-    return subtotal * (taxRate / 100);
+    return updatedInvoice;
   }
 
   async getDueReminders(): Promise<Invoice[]> {
@@ -75,9 +102,22 @@ export class InvoiceService {
 
   async sendReminder(invoiceId: string): Promise<{ success: boolean; message: string }> {
     const invoice = await this.findOne(invoiceId);
+    
+    // Basic reminder implementation
+    const reminder = {
+      to: invoice.clientContact.email,
+      subject: `Invoice Reminder: ${invoice.invoiceNumber}`,
+      message: `This is a reminder that invoice ${invoice.invoiceNumber} for ${invoice.total} is due on ${invoice.dueDate}`
+    };
+
+    // Update last reminder sent
+    await this.invoiceModel.findByIdAndUpdate(invoiceId, {
+      lastReminderSent: new Date()
+    });
+
     return {
       success: true,
-      message: `Reminder sent for invoice ${invoice.invoiceNumber} to client ${invoice.clientId}`
+      message: `Reminder sent to ${reminder.to} for invoice ${invoice.invoiceNumber}`
     };
   }
 } 

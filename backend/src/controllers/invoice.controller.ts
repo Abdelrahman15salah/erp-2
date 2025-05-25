@@ -27,8 +27,8 @@ export class InvoiceController {
   }
 
   @Post('calculate-tax')
-  async calculateTax(@Body() data: { subtotal: number; taxRate: number }) {
-    return this.invoiceService.calculateTax(data.subtotal, data.taxRate);
+  async calculateTax(@Body() data: { subtotal: number; taxRate: number; region: string }) {
+    return this.invoiceService.calculateTax(data.subtotal, data.taxRate, data.region);
   }
 
   @Get('reminders/due')

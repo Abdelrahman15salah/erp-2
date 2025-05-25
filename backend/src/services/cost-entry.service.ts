@@ -9,8 +9,16 @@ export class CostEntryService {
     @InjectModel(CostEntry.name) private costEntryModel: Model<CostEntry>,
   ) {}
 
-  async create(costEntry: CostEntry): Promise<CostEntry> {
-    const newCostEntry = new this.costEntryModel(costEntry);
+  async create(costEntryData: {
+    category: string;
+    amount: number;
+    date: Date;
+    description: string;
+  }): Promise<CostEntry> {
+    const newCostEntry = new this.costEntryModel({
+      ...costEntryData,
+      date: costEntryData.date || new Date()
+    });
     return newCostEntry.save();
   }
 
@@ -26,13 +34,26 @@ export class CostEntryService {
     return costEntry;
   }
 
-  async update(id: string, costEntry: CostEntry): Promise<CostEntry> {
+  async update(id: string, costEntryData: Partial<CostEntry>): Promise<CostEntry> {
     const updatedCostEntry = await this.costEntryModel
-      .findByIdAndUpdate(id, costEntry, { new: true })
+      .findByIdAndUpdate(id, costEntryData, { new: true })
       .exec();
     if (!updatedCostEntry) {
       throw new NotFoundException(`Cost entry with ID ${id} not found`);
     }
     return updatedCostEntry;
+  }
+
+  async findByCategory(category: string): Promise<CostEntry[]> {
+    return this.costEntryModel.find({ category }).exec();
+  }
+
+  async findByDateRange(startDate: Date, endDate: Date): Promise<CostEntry[]> {
+    return this.costEntryModel.find({
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    }).exec();
   }
 } 

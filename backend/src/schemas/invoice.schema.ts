@@ -11,6 +11,18 @@ export class InvoiceItem {
 
   @Prop()
   unitPrice: number;
+
+  @Prop()
+  subtotal: number;
+}
+
+@Schema()
+export class ClientContact {
+  @Prop()
+  email: string;
+
+  @Prop()
+  phone: string;
 }
 
 @Schema({ timestamps: true })
@@ -21,14 +33,32 @@ export class Invoice extends Document {
   @Prop()
   clientId: string;
 
+  @Prop()
+  clientName: string;
+
+  @Prop()
+  clientContact: ClientContact;
+
   @Prop([InvoiceItem])
   items: InvoiceItem[];
+
+  @Prop()
+  subtotal: number;
 
   @Prop()
   tax: number;
 
   @Prop()
+  taxRate: number;
+
+  @Prop()
+  taxRegion: string;
+
+  @Prop()
   discount: number;
+
+  @Prop()
+  total: number;
 
   @Prop()
   dueDate: Date;
@@ -38,6 +68,9 @@ export class Invoice extends Document {
 
   @Prop()
   createdAt: Date;
+
+  @Prop()
+  lastReminderSent: Date;
 }
 
-export const InvoiceSchema = SchemaFactory.createForClass(Invoice); 
+export const InvoiceSchema = SchemaFactory.createForClass(Invoice);

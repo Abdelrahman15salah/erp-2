@@ -4,12 +4,21 @@ import SendIcon from '@mui/icons-material/Send';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import axios from 'axios';
 
+interface ClientContact {
+  email: string;
+  phone: string;
+}
+
 interface Invoice {
   _id: string;
   invoiceNumber: string;
   clientId: string;
+  clientName: string;
+  clientContact: ClientContact;
+  total: number;
   dueDate: string;
   status: string;
+  lastReminderSent?: string;
 }
 
 const InvoiceReminders = () => {
@@ -41,7 +50,8 @@ const InvoiceReminders = () => {
     try {
       const response = await axios.post(`http://localhost:3000/invoices/reminders/${invoiceId}/send`);
       setMessage({ type: 'success', text: response.data.message });
-      setTimeout(() => setMessage(null), 3000);
+      // Refresh the list to update lastReminderSent
+      fetchDueInvoices();
     } catch (error) {
       console.error('Error sending reminder:', error);
       setMessage({ type: 'error', text: 'Error sending reminder' });
@@ -64,6 +74,14 @@ const InvoiceReminders = () => {
       default:
         return 'default';
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -140,11 +158,22 @@ const InvoiceReminders = () => {
                   secondary={
                     <Box sx={{ mt: 0.5 }}>
                       <Typography variant="body2" color="text.secondary">
-                        Client: {invoice.clientId}
+                        Client: {invoice.clientName} ({invoice.clientId})
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                        Contact: {invoice.clientContact?.email || 'N/A'} | {invoice.clientContact?.phone || 'N/A'}
                       </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Amount: ${(invoice.total || 0).toFixed(2)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Due: {formatDate(invoice.dueDate)}
+                      </Typography>
+                      {invoice.lastReminderSent && (
+                        <Typography variant="body2" color="text.secondary">
+                          Last Reminder: {formatDate(invoice.lastReminderSent)}
+                        </Typography>
+                      )}
                     </Box>
                   }
                 />
