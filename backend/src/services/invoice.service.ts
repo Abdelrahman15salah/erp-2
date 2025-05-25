@@ -9,8 +9,30 @@ export class InvoiceService {
     @InjectModel(Invoice.name) private invoiceModel: Model<Invoice>,
   ) {}
 
+  private async generateInvoiceNumber(): Promise<string> {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    
+    // Get the count of invoices for the current month
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    const count = await this.invoiceModel.countDocuments({
+      createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+    });
+    
+    // Format: INV-YYYY-MM-XXXX where XXXX is a sequential number
+    return `INV-${year}-${month}-${String(count + 1).padStart(4, '0')}`;
+  }
+
   async create(invoice: Invoice): Promise<Invoice> {
-    const newInvoice = new this.invoiceModel(invoice);
+    const invoiceNumber = await this.generateInvoiceNumber();
+    const newInvoice = new this.invoiceModel({
+      ...invoice,
+      invoiceNumber,
+      status: 'pending'
+    });
     return newInvoice.save();
   }
 

@@ -13,7 +13,7 @@ export class InvoiceItem {
   unitPrice: number;
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class Invoice extends Document {
   @Prop()
   invoiceNumber: string;
@@ -35,6 +35,9 @@ export class Invoice extends Document {
 
   @Prop()
   status: string;
+
+  @Prop()
+  createdAt: Date;
 }
 
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice); 

@@ -12,7 +12,7 @@ import { databaseConfig } from './config/database.config';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(databaseConfig.uri, databaseConfig.options),
+    MongooseModule.forRoot(databaseConfig.uri || '', databaseConfig.options),
     MongooseModule.forFeature([
       { name: CostEntry.name, schema: CostEntrySchema },
       { name: Invoice.name, schema: InvoiceSchema },
